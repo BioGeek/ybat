@@ -56,10 +56,10 @@
         startRealY: 0
     }
 
-    // Prevent context menu on right click - it's used for panning
-    document.addEventListener("contextmenu", function (e) {
-        e.preventDefault()
-    }, false)
+    // Prevent context menu on right click 
+    // document.addEventListener("contextmenu", function (e) {
+    //     e.preventDefault()
+    // }, false)
 
     const isSupported = ()  => {
         try {
@@ -94,19 +94,16 @@
             listenImageSelect()
             listenClassLoad()
             listenClassSelect()
-            listenBboxLoad()
             listenBboxSave()
             listenBboxVocSave()
             listenBboxCocoSave()
-            listenBboxRestore()
+            // listenBboxRestore()
             listenKeyboard()
-            listenImageSearch()
-            listenImageCrop()
         }
     }
 
     const listenCanvas = () => {
-        canvas = new Canvas("canvas", document.getElementById("right").clientWidth, window.innerHeight - 20)
+        canvas = new Canvas("canvas", document.getElementById("left").clientWidth, window.innerHeight - 20)
 
         canvas.on("draw", (context) => {
             if (currentImage !== null) {
@@ -115,7 +112,7 @@
                 drawExistingBboxes(context)
                 drawCross(context)
             } else {
-                drawIntro(context)
+                // drawIntro(context)
             }
         }).start()
     }
@@ -308,7 +305,6 @@
         resizeBbox()
         changeCursorByLocation()
 
-        panImage(xx, yy)
     }
 
     const storeNewBbox = (movedWidth, movedHeight) => {
@@ -539,16 +535,6 @@
                     document.body.style.cursor = "nwse-resize"
                 }
             }
-        }
-    }
-
-    const panImage= (xx, yy) => {
-        if (mouse.buttonR === true) {
-            canvasX -= mouse.realX - xx
-            canvasY -= mouse.realY - yy
-
-            mouse.realX = zoomXInv(mouse.x)
-            mouse.realY = zoomYInv(mouse.y)
         }
     }
 
@@ -805,52 +791,6 @@
             classListIndex = classList.selectedIndex
 
             setCurrentClass()
-        })
-    }
-
-    const listenBboxLoad = () => {
-        const bboxesElement = document.getElementById("bboxes")
-
-        bboxesElement.addEventListener("click", () => {
-            bboxesElement.value = null
-        })
-
-        bboxesElement.addEventListener("change", (event) => {
-            const files = event.target.files
-
-            if (files.length > 0) {
-                resetBboxes()
-
-                for (let i = 0; i < files.length; i++) {
-                    const reader = new FileReader()
-
-                    const extension = files[i].name.split(".").pop()
-
-                    reader.addEventListener("load", () => {
-                        if (extension === "txt" || extension === "xml" || extension === "json") {
-                            storeBbox(files[i].name, reader.result)
-                        } else {
-                            const zip = new JSZip()
-
-                            zip.loadAsync(reader.result)
-                                .then((result) => {
-                                    for (let filename in result.files) {
-                                        result.file(filename).async("string")
-                                            .then((text) => {
-                                                storeBbox(filename, text)
-                                            })
-                                    }
-                                })
-                        }
-                    })
-
-                    if (extension === "txt" || extension === "xml"  || extension === "json") {
-                        reader.readAsText(files[i])
-                    } else {
-                        reader.readAsArrayBuffer(event.target.files[i])
-                    }
-                }
-            }
         })
     }
 
@@ -1248,43 +1188,6 @@
                 event.preventDefault()
             }
 
-            if (key === 38) {
-                if (classList.length > 1) {
-                    classList.options[classListIndex].selected = false
-
-                    if (classListIndex === 0) {
-                        classListIndex = classList.length - 1
-                    } else {
-                        classListIndex--
-                    }
-
-                    classList.options[classListIndex].selected = true
-                    classList.selectedIndex = classListIndex
-
-                    setCurrentClass()
-                }
-
-                event.preventDefault()
-            }
-
-            if (key === 40) {
-                if (classList.length > 1) {
-                    classList.options[classListIndex].selected = false
-
-                    if (classListIndex === classList.length - 1) {
-                        classListIndex = 0
-                    } else {
-                        classListIndex++
-                    }
-
-                    classList.options[classListIndex].selected = true
-                    classList.selectedIndex = classListIndex
-
-                    setCurrentClass()
-                }
-
-                event.preventDefault()
-            }
         })
     }
 
@@ -1305,91 +1208,4 @@
         mouse.startRealY = 0
     }
 
-    const listenImageSearch = () => {
-        document.getElementById("imageSearch").addEventListener("input", (event) => {
-            const value = event.target.value
-
-            for (let imageName in images) {
-                if (imageName.indexOf(value) !== -1) {
-                    document.getElementById("imageList").selectedIndex = images[imageName].index
-
-                    setCurrentImage(images[imageName])
-
-                    break
-                }
-            }
-        })
-    }
-
-    const listenImageCrop = () => {
-        document.getElementById("cropImages").addEventListener("click", () => {
-            const zip = new JSZip()
-
-            let x = 0
-
-            for (let imageName in bboxes) {
-                const image = images[imageName]
-
-                for (let className in bboxes[imageName]) {
-                    for (let i = 0; i < bboxes[imageName][className].length; i++) {
-                        x++
-
-                        if (x === 1) {
-                            document.body.style.cursor = "wait" // Mark as busy
-                        }
-
-                        const bbox = bboxes[imageName][className][i]
-
-                        const reader = new FileReader()
-
-                        reader.addEventListener("load", () => {
-                            const dataUrl = reader.result
-                            const imageObject = new Image()
-
-                            imageObject.addEventListener("load", () => {
-                                const temporaryCanvas = document.createElement("canvas")
-
-                                temporaryCanvas.style.display = "none"
-                                temporaryCanvas.width = bbox.width
-                                temporaryCanvas.height = bbox.height
-
-                                temporaryCanvas.getContext("2d").drawImage(
-                                    imageObject,
-                                    bbox.x,
-                                    bbox.y,
-                                    bbox.width,
-                                    bbox.height,
-                                    0,
-                                    0,
-                                    bbox.width,
-                                    bbox.height
-                                )
-
-                                temporaryCanvas.toBlob((blob) => {
-                                    const imageNameParts = imageName.split(".")
-
-                                    imageNameParts[imageNameParts.length - 2] += `-${className}-${i}`
-
-                                    zip.file(imageNameParts.join("."), blob)
-
-                                    if (--x === 0) {
-                                        document.body.style.cursor = "default"
-
-                                        zip.generateAsync({type: "blob"})
-                                            .then((blob) => {
-                                                saveAs(blob, "crops.zip")
-                                            })
-                                    }
-                                }, image.meta.type)
-                            })
-
-                            imageObject.src = dataUrl
-                        })
-
-                        reader.readAsDataURL(image.meta)
-                    }
-                }
-            }
-        })
-    }
 })()
