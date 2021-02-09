@@ -94,10 +94,11 @@
             listenImageSelect()
             listenClassLoad()
             listenClassSelect()
+            listenBboxLoad()
             listenBboxSave()
-            listenBboxVocSave()
-            listenBboxCocoSave()
-            // listenBboxRestore()
+            //listenBboxVocSave()
+            //listenBboxCocoSave()
+            listenBboxRestore()
             listenKeyboard()
         }
     }
@@ -946,6 +947,52 @@
                 }
             }
         }
+    }
+
+    const listenBboxLoad = () => {
+        const bboxesElement = document.getElementById("bboxes")
+
+        bboxesElement.addEventListener("click", () => {
+            bboxesElement.value = null
+        })
+
+        bboxesElement.addEventListener("change", (event) => {
+            const files = event.target.files
+
+            if (files.length > 0) {
+                resetBboxes()
+
+                for (let i = 0; i < files.length; i++) {
+                    const reader = new FileReader()
+
+                    const extension = files[i].name.split(".").pop()
+
+                    reader.addEventListener("load", () => {
+                        if (extension === "txt" || extension === "xml" || extension === "json") {
+                            storeBbox(files[i].name, reader.result)
+                        } else {
+                            const zip = new JSZip()
+
+                            zip.loadAsync(reader.result)
+                                .then((result) => {
+                                    for (let filename in result.files) {
+                                        result.file(filename).async("string")
+                                            .then((text) => {
+                                                storeBbox(filename, text)
+                                            })
+                                    }
+                                })
+                        }
+                    })
+
+                    if (extension === "txt" || extension === "xml"  || extension === "json") {
+                        reader.readAsText(files[i])
+                    } else {
+                        reader.readAsArrayBuffer(event.target.files[i])
+                    }
+                }
+            }
+        })
     }
 
     const listenBboxSave = () => {
